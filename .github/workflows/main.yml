@@ -19,16 +19,28 @@ jobs:
     # conrainer with pre-installed mender-artifact and mender-cli tools
     container:
       image: mendersoftware/mender-ci-tools:mender-master
-    name: Upload a dummy Mender artifact
+    name: Deploy a dummy Mender Artifact
     steps:
       # Checkout git repository
       - uses: actions/checkout@v3
       # Download Mender bash client
+      - name: Serup environment
+        run: |
+          apk add --no-cache openssl jq
+          # secrets are not passed to the runner when a workflow is triggered from a forked repository
+          # https://docs.github.com/en/actions/security-guides/encrypted-secrets#using-encrypted-secrets-in-a-workflow
+          if [[ -z "${{ secrets.MENDER_TENANT_TOKEN }}" ]]; then
+            echo "ERROR: MENDER_TENANT_TOKEN is empty."
+            exit 1
+          fi
+          if [[ -z "${{ secrets.MENDER_SERVER_ACCESS_TOKEN }}" ]]; then
+            echo "ERROR: MENDER_SERVER_ACCESS_TOKEN is empty."
+            exit 1
+          fi
       - name: Setup Mender bash client
         run: |
           curl -O https://raw.githubusercontent.com/mendersoftware/bash-mender-client/master/mender-client.sh
           chmod +x mender-client.sh
-          apk add openssl jq
           mkdir keys
           openssl genpkey -algorithm RSA -out keys/private.key -pkeyopt rsa_keygen_bits:3072
           openssl rsa -in keys/private.key -out keys/private.key
@@ -46,22 +58,25 @@ jobs:
           BEFORE_DEVICES=/tmp/devauth.json
           BEFORE_DEVICES_COUNT="$(get_pending_devices_count ${BEFORE_DEVICES})"
           # start Mender bash client
-          ./mender-client.sh -s "${MENDER_SERVER_URL}" -k ./keys -d raspberrypi4 -t ${{ secrets.MENDER_TENANT_TOKEN }} 2>&1 >/dev/null &
+          ./mender-client.sh -s "${MENDER_SERVER_URL}" -k ./keys -d raspberrypi4 -t ${{ secrets.MENDER_TENANT_TOKEN }} 2>&1 >/tmp/device.log &
           # wait while the device appears in pending
           CURRENT_DEVICES=/tmp/devauth_current.json
           count=0
           while [ $(get_pending_devices_count ${CURRENT_DEVICES}) -eq ${BEFORE_DEVICES_COUNT} ]; do
             let count=$count+1
-            [ $count -ge 10 ] && { echo "ERROR: the device doesn't appear as pending"; exit 1; }
+            if [ $count -ge 10 ]; then
+              echo "ERROR: the device doesn't appear as pending"
+              exit 1
+            fi
             sleep 2
           done
           # accept a device
-          for id in $(jq -r '.[].id' /tmp/devauth_current.json); do
-            if ! grep -q ${id} /tmp/devauth.json; then
+          for id in $(jq -r '.[].id' ${CURRENT_DEVICES}); do
+            if ! grep -q ${id} ${BEFORE_DEVICES}; then
               auth_set_id=$(curl -s -X GET ${MENDER_SERVER_URL}/api/management/v2/devauth/devices/${id} \
                 -H "Accept: application/json" \
                 -H "Authorization: Bearer ${{ secrets.MENDER_SERVER_ACCESS_TOKEN }}" | jq -r '.auth_sets[].id')
-              curl -s -X PUT ${MENDER_SERVER_URL}/api/management/v2/devauth/devices/${id}/auth/${auth_set_id}/status \
+              curl -i -s -X PUT ${MENDER_SERVER_URL}/api/management/v2/devauth/devices/${id}/auth/${auth_set_id}/status \
                 -H "Content-Type: application/json" \
                 -H "Accept: application/json" \
                 -H "Authorization: Bearer ${{ secrets.MENDER_SERVER_ACCESS_TOKEN }}" \
@@ -124,7 +139,7 @@ jobs:
       - name: Cleanup - delete artifact
         if: always()
         run: |
-          artifact_id=$(curl -s -X GET ${MENDER_SERVER_URL}/api/management/v1/deployments/artifacts/list?name=change-the-world-to-better-v1.0 \
+          artifact_id=$(curl -s -X GET ${MENDER_SERVER_URL}/api/management/v1/deployments/artifacts/list?name=${MENDER_RELEASE_NAME} \
             -H "Accept: application/json" \
             -H "Authorization: Bearer ${{ secrets.MENDER_SERVER_ACCESS_TOKEN }}" | jq -r '.[].id')
           curl -i -X DELETE ${MENDER_SERVER_URL}/api/management/v1/deployments/artifacts/${artifact_id} \
