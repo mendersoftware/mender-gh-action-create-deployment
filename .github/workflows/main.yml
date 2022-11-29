@@ -89,19 +89,15 @@ jobs:
       # Creates Mender Artifact
       - name: Create Mender Artifact
         run: |
-          echo /home/root/.ssh > dest_dir
-          echo authorized_keys > filename
           echo key > authorized_keys
-          mender-artifact write module-image \
-            -T single-file \
+          single-file-artifact-gen \
             --device-type raspberrypi4 \
             -o ${MENDER_ARTIFACT_NAME} \
             -n ${MENDER_RELEASE_NAME} \
             --software-name authorized_keys \
             --software-version 1.0 \
-            -f dest_dir \
-            -f filename \
-            -f authorized_keys
+            --dest-dir /home/root/.ssh \
+            authorized_keys
       # Uploads Mender Artifact to a Mender server
       - name: Upload Mender Artifacts to Mender server
         uses: mendersoftware/mender-gh-action-upload-artifact@master
