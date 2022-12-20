@@ -25,8 +25,9 @@ jobs:
       - uses: actions/checkout@v3
       # Download Mender bash client
       - name: Serup environment
+        shell: bash
         run: |
-          apk add --no-cache openssl jq
+          apt-get update && apt-get install -y jq
           # secrets are not passed to the runner when a workflow is triggered from a forked repository
           # https://docs.github.com/en/actions/security-guides/encrypted-secrets#using-encrypted-secrets-in-a-workflow
           if [[ -z "${{ secrets.MENDER_TENANT_TOKEN }}" ]]; then
@@ -38,6 +39,7 @@ jobs:
             exit 1
           fi
       - name: Setup Mender bash client
+        shell: bash
         run: |
           curl -O https://raw.githubusercontent.com/mendersoftware/bash-mender-client/master/mender-client.sh
           chmod +x mender-client.sh
@@ -47,6 +49,7 @@ jobs:
           openssl rsa -in keys/private.key -out keys/public.key -pubout
       # Accept the client
       - name: Start Mender bash client and accept the device
+        shell: bash
         run: |
           # check number of pending devices
           get_pending_devices_count() {
@@ -88,6 +91,7 @@ jobs:
           done
       # Creates Mender Artifact
       - name: Create Mender Artifact
+        shell: bash
         run: |
           echo key > authorized_keys
           single-file-artifact-gen \
@@ -116,6 +120,7 @@ jobs:
           mender_devices_list: ${{ env.MENDER_DEVICES_LIST }}
       - name: Wait while the deloyment finishes
         if: always()
+        shell: bash
         run: |
           deployment_id=$(curl -s -X GET ${MENDER_SERVER_URL}/api/management/v1/deployments/deployments?status=pending \
               -H "Accept: application/json" \
@@ -134,6 +139,7 @@ jobs:
           done
       - name: Cleanup - delete artifact
         if: always()
+        shell: bash
         run: |
           artifact_id=$(curl -s -X GET ${MENDER_SERVER_URL}/api/management/v1/deployments/artifacts/list?name=${MENDER_RELEASE_NAME} \
             -H "Accept: application/json" \
@@ -143,6 +149,7 @@ jobs:
             -H "Authorization: Bearer ${{ secrets.MENDER_SERVER_ACCESS_TOKEN }}"
       - name: Cleanup - delete device
         if: always()
+        shell: bash
         run: |
           curl -i -X DELETE ${MENDER_SERVER_URL}/api/management/v2/devauth/devices/${MENDER_DEVICE_ID} \
             -H "Accept: application/json" \
