@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-latest
     # conrainer with pre-installed mender-artifact and mender-cli tools
     container:
-      image: mendersoftware/mender-ci-tools:mender-master
+      image: mendersoftware/mender-ci-tools:master
     name: Deploy a dummy Mender Artifact
     steps:
       # Checkout git repository
