@@ -1,5 +1,8 @@
 name: 'Create Mender deployment'
 description: 'Create a deployment on a Mender server'
+branding:
+  icon: "send"
+  color: "white"
 inputs:
   mender_pat:
     description: 'personal access token for the Mender server account to be used'
