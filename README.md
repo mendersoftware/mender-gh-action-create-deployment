@@ -36,6 +36,6 @@ To start editing right away, open the repository on [Gitpod](https://gitpod.io):
 * Follow us on [Twitter](https://twitter.com/mender_io). Please
   feel free to tweet us questions.
 * Fork us on [Github](https://github.com/mendersoftware)
-* Create an issue in the [bugtracker](https://tracker.mender.io/projects/MEN)
+* Create an issue in the [bugtracker](https://northerntech.atlassian.net/projects/MEN)
 * Email us at [contact@mender.io](mailto:contact@mender.io)
 * Connect to the [#mender IRC channel on Libera](https://web.libera.chat/?#mender)
