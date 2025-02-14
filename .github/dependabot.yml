@@ -1,0 +1,11 @@
+version: 2
+updates:
+
+  - package-ecosystem: github-actions
+    commit-message:
+      prefix: chore
+    directory: /
+    schedule:
+      interval: monthly
+    reviewers:
+      - "mendersoftware/client-dependabot-reviewers"
