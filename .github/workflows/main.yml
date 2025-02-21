@@ -24,7 +24,7 @@ jobs:
       # Checkout git repository
       - uses: actions/checkout@v3
       # Download Mender bash client
-      - name: Serup environment
+      - name: Setup environment
         shell: bash
         run: |
           apt-get update && apt-get install -y jq
