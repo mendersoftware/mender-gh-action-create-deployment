@@ -22,7 +22,7 @@ jobs:
     name: Deploy a dummy Mender Artifact
     steps:
       # Checkout git repository
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       # Download Mender bash client
       - name: Setup environment
         shell: bash
