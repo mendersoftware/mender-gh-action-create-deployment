@@ -23,6 +23,10 @@ inputs:
     description: 'URI for the Mender server to be used'
     required: false
     default: 'https://hosted.mender.io'
+  retries:
+    description: 'number of times a device can retry the deployment in case of failure, defaults to 0'
+    required: false 
+    default: 1
 runs:
   using: "composite"
   steps:
@@ -47,7 +51,7 @@ runs:
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             -H "Authorization: Bearer ${{ inputs.mender_pat }}" \
-            --data-raw "{\"name\": \"${{ inputs.mender_deployment_name }}\", \"artifact_name\": \"${{ inputs.mender_release_name }}\"}")
+            --data-raw "{\"name\": \"${{ inputs.mender_deployment_name }}\", \"artifact_name\": \"${{ inputs.mender_release_name }}\", \"retries\": ${{ inputs.retries }} }")
         else
           # Makes management 'create deployment' API call to Mender server, using curl
           # https://docs.mender.io/api/#management-api-deployments-create-deployment
@@ -56,7 +60,7 @@ runs:
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             -H "Authorization: Bearer ${{ inputs.mender_pat }}" \
-            --data-raw "{\"name\": \"${{ inputs.mender_deployment_name }}\", \"artifact_name\": \"${{ inputs.mender_release_name }}\", \"devices\": ${MENDER_DEVICES_LIST}}")
+            --data-raw "{\"name\": \"${{ inputs.mender_deployment_name }}\", \"artifact_name\": \"${{ inputs.mender_release_name }}\", \"retries\": ${{ inputs.retries }}, \"devices\": ${MENDER_DEVICES_LIST}}")
         fi
         if [[ ! -z "${RESPONSE}" || "${RESPONSE}" != "" ]]; then
           echo "ERROR: failed to create deployment '${{ inputs.mender_deployment_name }}', devices: ${MENDER_DEVICES_LIST}, server: ${{ inputs.mender_uri }}"
