@@ -47,7 +47,7 @@ runs:
         if [ ! -z ${{ inputs.mender_devices_group }} ]; then
           # Makes management 'create deployment for group' API call to Mender server, using curl
           # https://docs.mender.io/api/#management-api-deployments-create-deployment-for-a-group-of-devices
-          RESPONSE=$(curl -s -X POST https://hosted.mender.io/api/management/v1/deployments/deployments/group/${{ inputs.mender_devices_group }} \
+          RESPONSE=$(curl -s -X POST ${{ inputs.mender_uri }}/api/management/v1/deployments/deployments/group/${{ inputs.mender_devices_group }} \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             -H "Authorization: Bearer ${{ inputs.mender_pat }}" \
