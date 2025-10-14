@@ -16,7 +16,7 @@ env:
 jobs:
   upload:
     runs-on: ubuntu-latest
-    # conrainer with pre-installed mender-artifact and mender-cli tools
+    # container with pre-installed mender-artifact and mender-cli tools
     container:
       image: mendersoftware/mender-ci-tools:master
     name: Deploy a dummy Mender Artifact
@@ -118,7 +118,7 @@ jobs:
           mender_deployment_name: ${{ env.MENDER_DEPLOYMENT_NAME }}
           mender_release_name: ${{ env.MENDER_RELEASE_NAME }}
           mender_devices_list: ${{ env.MENDER_DEVICES_LIST }}
-      - name: Wait while the deloyment finishes
+      - name: Wait while the deployment finishes
         if: always()
         shell: bash
         run: |
