@@ -16,9 +16,6 @@ inputs:
   mender_devices_group:
     description: 'the name of the devices group to which the release will be deployed'
     required: false
-  mender_device_attributes:
-    description: 'the attributes of devices to which the release will be deployed'
-    required: false
   mender_devices_list:
     description: 'the list of device IDs to which the release will be deployed'
     required: false
@@ -36,27 +33,9 @@ runs:
     - id: input_validation
       shell: bash
       run: |
-        # Check that only one of mender_devices_group, mender_device_attributes or mender_devices_list is set
-        devices_group="${{ inputs.mender_devices_group }}"
-        device_attributes="${{ inputs.mender_device_attributes }}"
-        devices_list="${{ inputs.mender_devices_list }}"
-        mender_counter=0
-        [[ ! -z "$devices_group" ]] && mender_counter=$((mender_counter + 1))
-        [[ ! -z "$device_attributes" ]] && mender_counter=$((mender_counter + 1))
-        [[ ! -z "$devices_list" ]] && mender_counter=$((mender_counter + 1))
-        if (( mender_counter == 0 )); then
-          echo "ERROR: mender_devices_group, mender_devices_list and mender_device_attributes are empty, at least one is expected to be set"
+        if [[ -z "${{ inputs.mender_devices_group }}" && -z "${{ inputs.mender_devices_list }}" ]]; then
+          echo "ERROR: both mender_devices_group and mender_devices_list are empty, at least one is expected to be set"
           exit 1
-        elif (( mender_counter > 1 )); then
-          echo "ERROR: only one of mender_devices_group, mender_devices_list or mender_device_attributes is expected to be set"
-          exit 1
-        fi
-        # Check tag is correct defined
-        if [[ -n "$device_attributes" ]]; then
-          if [[ ! "$device_attributes" =~ ^[A-Za-z0-9_]+=[^#=]+(#[A-Za-z0-9_]+=[^#=]+)*$ ]]; then
-            echo "ERROR: attributes need to be in the format key=value or key=value#key=value"
-            exit 1
-          fi
         fi
         if [ ! -f $(which curl) ]; then
           echo "ERROR: 'curl' is missing"
@@ -65,7 +44,7 @@ runs:
     - id: create_deployment
       shell: bash
       run: |
-        if [[ -n "${{ inputs.mender_devices_group }}" ]]; then
+        if [ ! -z ${{ inputs.mender_devices_group }} ]; then
           # Makes management 'create deployment for group' API call to Mender server, using curl
           # https://docs.mender.io/api/#management-api-deployments-create-deployment-for-a-group-of-devices
           RESPONSE=$(curl -s -X POST ${{ inputs.mender_uri }}/api/management/v1/deployments/deployments/group/${{ inputs.mender_devices_group }} \
@@ -73,34 +52,19 @@ runs:
             -H "Accept: application/json" \
             -H "Authorization: Bearer ${{ inputs.mender_pat }}" \
             --data-raw "{\"name\": \"${{ inputs.mender_deployment_name }}\", \"artifact_name\": \"${{ inputs.mender_release_name }}\", \"retries\": ${{ inputs.retries }} }")
-        elif [[ -n "${{ inputs.mender_device_attributes }}" ]]; then
-          # Fetches the list of device IDs matching the given attributes, using curl and jq
-          # Makes management 'create deployment for devices with selected attributes' API call to Mender server, using curl
-          # https://docs.mender.io/api/#management-api-device-inventory
-          # https://docs.mender.io/api/#management-api-deployments-create-deployment
-          MENDER_DEVICES_LIST=$(curl -s -X GET "${{ inputs.mender_uri }}/api/management/v1/inventory/devices?tags/${{ inputs.mender_device_attributes }}" \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/json" \
-            -H "Authorization: Bearer ${{ inputs.mender_pat }}")
-            echo $MENDER_DEVICES_LIST
-          RESPONSE=$(curl -s -X POST ${{ inputs.mender_uri }}/api/management/v1/deployments/deployments \
-            -H "Content-Type: application/json" \
-            -H "Accept: application/json" \
-            -H "Authorization: Bearer ${{ inputs.mender_pat }}" \
-            --data-raw "{\"name\": \"${{ inputs.mender_deployment_name }}\", \"artifact_name\": \"${{ inputs.mender_release_name }}\", \"retries\": ${{ inputs.retries }}, \"devices\": $MENDER_DEVICES_LIST}")
-        elif [[ -n "${{ inputs.mender_devices_list }}" ]]; then
+        else
           # Makes management 'create deployment' API call to Mender server, using curl
           # https://docs.mender.io/api/#management-api-deployments-create-deployment
-          MENDER_DEVICES_LIST=$(echo "${{ inputs.mender_devices_list }}" | tr -d ' ')
+          MENDER_DEVICES_LIST=${{ inputs.mender_devices_list }}
           RESPONSE=$(curl -s -X POST ${{ inputs.mender_uri }}/api/management/v1/deployments/deployments \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
             -H "Authorization: Bearer ${{ inputs.mender_pat }}" \
-            --data-raw "{\"name\": \"${{ inputs.mender_deployment_name }}\", \"artifact_name\": \"${{ inputs.mender_release_name }}\", \"retries\": ${{ inputs.retries }}, \"devices\": $MENDER_DEVICES_LIST}")
+            --data-raw "{\"name\": \"${{ inputs.mender_deployment_name }}\", \"artifact_name\": \"${{ inputs.mender_release_name }}\", \"retries\": ${{ inputs.retries }}, \"devices\": ${MENDER_DEVICES_LIST}}")
         fi
         if [[ ! -z "${RESPONSE}" || "${RESPONSE}" != "" ]]; then
-          echo "ERROR: failed to create deployment '${{ inputs.mender_deployment_name }}', group: ${{ inputs.mender_devices_group }}, devices: ${MENDER_DEVICES_LIST}, server: ${{ inputs.mender_uri }}"
+          echo "ERROR: failed to create deployment '${{ inputs.mender_deployment_name }}', devices: ${MENDER_DEVICES_LIST}, server: ${{ inputs.mender_uri }}"
           echo "Server's response: ${RESPONSE}"
           exit 1
         fi
-        echo "INFO: deployment '${{ inputs.mender_deployment_name }}' with release '${{ inputs.mender_release_name }}' for device group '${{ inputs.mender_devices_group }}${{ inputs.mender_devices_list }}${{ inputs.mender_device_attributes }}' successfully created"
+        echo "INFO: deployment '${{ inputs.mender_deployment_name }}' with release '${{ inputs.mender_release_name }}' for device group '${{ inputs.mender_devices_group }}${{ inputs.mender_devices_list }}' successfully created"
