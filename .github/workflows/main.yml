@@ -154,3 +154,8 @@ jobs:
           curl -i -X DELETE ${MENDER_SERVER_URL}/api/management/v2/devauth/devices/${MENDER_DEVICE_ID} \
             -H "Accept: application/json" \
             -H "Authorization: Bearer ${{ secrets.MENDER_SERVER_ACCESS_TOKEN }}"
+      - name: Client logs
+        if: failure()
+        shell: bash
+        run: |
+          cat /tmp/device.log
