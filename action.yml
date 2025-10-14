@@ -62,10 +62,6 @@ runs:
           echo "ERROR: 'curl' is missing"
           exit 1
         fi
-        if [ ! -f $(which jq) ]; then
-          echo "ERROR: 'jq' is missing"
-          exit 1
-        fi
     - id: create_deployment
       shell: bash
       run: |
@@ -85,7 +81,7 @@ runs:
           MENDER_DEVICES_LIST=$(curl -s -X GET "${{ inputs.mender_uri }}/api/management/v1/inventory/devices?tags/${{ inputs.mender_device_attributes }}" \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
-            -H "Authorization: Bearer ${{ inputs.mender_pat }}" | jq '[.[].id]')
+            -H "Authorization: Bearer ${{ inputs.mender_pat }}")
             echo $MENDER_DEVICES_LIST
           RESPONSE=$(curl -s -X POST ${{ inputs.mender_uri }}/api/management/v1/deployments/deployments \
             -H "Content-Type: application/json" \
@@ -95,7 +91,7 @@ runs:
         elif [[ -n "${{ inputs.mender_devices_list }}" ]]; then
           # Makes management 'create deployment' API call to Mender server, using curl
           # https://docs.mender.io/api/#management-api-deployments-create-deployment
-          MENDER_DEVICES_LIST=$(echo "${{ inputs.mender_devices_list }}" | tr -d ' ' | jq -R 'split(",")')
+          MENDER_DEVICES_LIST=$(echo "${{ inputs.mender_devices_list }}" | tr -d ' ')
           RESPONSE=$(curl -s -X POST ${{ inputs.mender_uri }}/api/management/v1/deployments/deployments \
             -H "Content-Type: application/json" \
             -H "Accept: application/json" \
