@@ -84,7 +84,7 @@ jobs:
                 -H "Accept: application/json" \
                 -H "Authorization: Bearer ${{ secrets.MENDER_SERVER_ACCESS_TOKEN }}" \
                 -d "{\"status\": \"accepted\"}"
-              echo "MENDER_DEVICES_LIST=[\\\"${id}\\\"]" >> ${GITHUB_ENV}
+              echo "MENDER_DEVICES_LIST=${id}" >> ${GITHUB_ENV}
               echo "MENDER_DEVICE_ID=${id}" >> ${GITHUB_ENV}
               break
             fi
