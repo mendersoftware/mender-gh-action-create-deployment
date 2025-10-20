@@ -16,7 +16,7 @@ env:
 jobs:
   upload:
     runs-on: ubuntu-latest
-    # conrainer with pre-installed mender-artifact and mender-cli tools
+    # container with pre-installed mender-artifact and mender-cli tools
     container:
       image: mendersoftware/mender-ci-tools:master
     name: Deploy a dummy Mender Artifact
@@ -84,7 +84,7 @@ jobs:
                 -H "Accept: application/json" \
                 -H "Authorization: Bearer ${{ secrets.MENDER_SERVER_ACCESS_TOKEN }}" \
                 -d "{\"status\": \"accepted\"}"
-              echo "MENDER_DEVICES_LIST=[\\\"${id}\\\"]" >> ${GITHUB_ENV}
+              echo "MENDER_DEVICES_LIST=${id}" >> ${GITHUB_ENV}
               echo "MENDER_DEVICE_ID=${id}" >> ${GITHUB_ENV}
               break
             fi
@@ -118,7 +118,7 @@ jobs:
           mender_deployment_name: ${{ env.MENDER_DEPLOYMENT_NAME }}
           mender_release_name: ${{ env.MENDER_RELEASE_NAME }}
           mender_devices_list: ${{ env.MENDER_DEVICES_LIST }}
-      - name: Wait while the deloyment finishes
+      - name: Wait while the deployment finishes
         if: always()
         shell: bash
         run: |
@@ -137,6 +137,18 @@ jobs:
             [ $count -ge 100 ] && { echo "ERROR: deployment '${deployment_id}' isn't finished"; exit 1; }
             sleep 2
           done
+      - name: Abort deployment when not finished
+        if: failure()
+        shell: bash
+        run: |
+          deployment_id=$(curl -s -X GET ${MENDER_SERVER_URL}/api/management/v1/deployments/deployments?status=pending \
+              -H "Accept: application/json" \
+              -H "Authorization: Bearer ${{ secrets.MENDER_SERVER_ACCESS_TOKEN }}" | jq -r '.[].id')
+          curl -i -s -X PUT ${MENDER_SERVER_URL}/api/management/v1/deployments/deployments/${deployment_id}/status \
+            -H "Content-Type: application/json" \
+            -H "Accept: application/json" \
+            -H "Authorization: Bearer ${{ secrets.MENDER_SERVER_ACCESS_TOKEN }}" \
+            -d "{\"status\": \"aborted\"}"
       - name: Cleanup - delete artifact
         if: always()
         shell: bash
@@ -154,3 +166,8 @@ jobs:
           curl -i -X DELETE ${MENDER_SERVER_URL}/api/management/v2/devauth/devices/${MENDER_DEVICE_ID} \
             -H "Accept: application/json" \
             -H "Authorization: Bearer ${{ secrets.MENDER_SERVER_ACCESS_TOKEN }}"
+      - name: Client logs
+        if: failure()
+        shell: bash
+        run: |
+          cat /tmp/device.log
